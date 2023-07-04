@@ -1,0 +1,65 @@
+ARG VPP_VERSION=master
+ARG SUSE_VERSION=15.4
+ARG GOVPP_VERSION=v0.3.5
+
+FROM opensuse/leap:${SUSE_VERSION} as vppbuild
+ARG VPP_VERSION
+RUN zypper install -y make sudo git python3
+RUN git clone https://github.com/FDio/vpp.git
+WORKDIR /vpp
+RUN git checkout ${VPP_VERSION}
+COPY patch/ patch/
+RUN test -x "patch/patch.sh" && ./patch/patch.sh || exit 1
+RUN UNATTENDED=y make install-dep
+# RUN ln -s /usr/bin/cmake /usr/bin/cmake3
+RUN UNATTENDED=y make install-ext-deps
+RUN make pkg-rpm
+RUN ./src/scripts/version > /vpp/VPP_VERSION
+RUN mkdir /rpms
+RUN cp /vpp/build-root/libvpp0-[[:digit:]]*.rpm /rpms/
+RUN cp /vpp/build-root/vpp-[[:digit:]]*.rpm /rpms/
+RUN cp /vpp/build-root/vpp-plugins-[[:digit:]]*.rpm /rpms
+RUN cp /vpp/build-root/vpp-devel-*.rpm /rpms
+RUN mkdir /dbg-rpms
+RUN cp /vpp/build-root/libvpp0-*.rpm /dbg-rpms/
+RUN cp /vpp/build-root/vpp-devel-*.rpm /dbg-rpms
+RUN cp /vpp/build-root/vpp-debugsource-*.rpm /dbg-rpms/
+RUN cp /vpp/build-root/vpp-debuginfo-*.rpm /dbg-rpms/
+RUN cp /vpp/build-root/libvpp0-debuginfo-*.rpm /dbg-rpms/
+RUN cp /vpp/build-root/vpp-plugins-debuginfo-*.rpm /dbg-rpms/
+
+FROM vppbuild as version
+CMD cat /vpp/VPP_VERSION
+
+FROM opensuse/leap:${SUSE_VERSION} as vppinstall
+COPY --from=vppbuild /rpms/ /rpms/
+RUN zypper install -y --no-recommends ca-certificates iputils iproute2 tcpdump
+RUN VPP_INSTALL_SKIP_SYSCTL=false zypper install --allow-unsigned-rpm -y --no-recommends /rpms/*.rpm;\
+    rm -rf /rpms
+
+FROM opensuse/leap:${SUSE_VERSION} as vpp
+COPY --from=vppinstall / /
+RUN mkdir -p /usr/lib/x86_64-linux-gnu
+RUN ln -s /usr/lib64/vpp_plugins /usr/lib/x86_64-linux-gnu/vpp_plugins
+RUN zypper install -y --no-recommends tar gzip
+
+FROM vpp as vpp-dbg
+COPY --from=vppbuild /rpms/ /base-rpms/
+COPY --from=vppbuild /dbg-rpms/ /rpms/
+RUN cp /base-rpms/vpp-[[:digit:]]*.rpm /rpms/
+WORKDIR /rpms/
+RUN VPP_INSTALL_SKIP_SYSCTL=false zypper install --allow-unsigned-rpm -y --no-recommends /rpms/*.rpm;
+
+FROM golang:1.15.3-alpine3.12 as binapi-generator
+ENV GO111MODULE=on
+ENV CGO_ENABLED=0
+ENV GOBIN=/bin
+ARG GOVPP_VERSION
+RUN go get git.fd.io/govpp.git/cmd/binapi-generator@${GOVPP_VERSION}
+
+FROM alpine:3.12 as gen
+COPY --from=vpp /usr/share/vpp/api/ /usr/share/vpp/api/
+COPY --from=binapi-generator /bin/binapi-generator /bin/binapi-generator
+COPY --from=vppbuild /vpp/VPP_VERSION /VPP_VERSION
+WORKDIR /gen
+CMD VPP_VERSION=$(cat /VPP_VERSION) binapi-generator ${PKGPREFIX+-import-prefix ${PKGPREFIX}}

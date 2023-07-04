@@ -1,0 +1,40 @@
+From e7caeac3ab8d93c594df643267f91b6026f0f966 Mon Sep 17 00:00:00 2001
+From: Laszlo Kiraly <laszlo.kiraly@est.tech>
+Date: Wed, 14 Jun 2023 20:44:09 +0200
+Subject: [PATCH] build; Generate debug rpm packages for opensuse
+
+---
+ extras/rpm/opensuse/vpp.spec | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/extras/rpm/opensuse/vpp.spec b/extras/rpm/opensuse/vpp.spec
+index d9a582ebd..3b1f54e31 100644
+--- a/extras/rpm/opensuse/vpp.spec
++++ b/extras/rpm/opensuse/vpp.spec
+@@ -15,7 +15,7 @@
+ # published by the Open Source Initiative.
+ 
+ %define _vpp_build_dir       %{buildroot}/../../BUILD/vpp-%{version}/build-root
+-%define _vpp_install_dir     %{_vpp_build_dir}/install-vpp-native/
++%define _vpp_install_dir     %{_vpp_build_dir}/install-vpp_debug-native/
+ %define _vpp_plugins_lib_dir %{_vpp_install_dir}/vpp/lib64
+ 
+ %define lname libvpp0
+@@ -134,11 +134,13 @@ This package contains the python bindings for the vpp api
+ %prep
+ %setup -q -n %{name}-%{version}
+ 
++%debug_package
++
+ %build
+ export VPP_BUILD_USER=suse
+ export VPP_BUILD_HOST=SUSE
+ 
+-make -C build-root V=1 PLATFORM=vpp TAG=vpp install-packages
++make -C build-root V=1 PLATFORM=vpp TAG=vpp_debug install-packages
+ 
+ cd %{_vpp_build_dir}/../src/vpp-api/python && %{py3_build}
+ 
+-- 
+2.34.1
+

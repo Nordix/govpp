@@ -135,11 +135,6 @@ jobs:
           git diff -- binapi || (echo "Rerun go generate ./... locally and resubmit" && exit -1)
       - name: Go Build
         run: go build ./...
-      - name: Docker Push
-        if: ${{steps.secrets.outputs.GHCR_TOKEN != '' && github.head_ref == ''}}
-        run: |
-          docker push ghcr.io/${{github.repository}}/vpp:${TAG}
-          docker push ghcr.io/${{github.repository}}/vpp-dbg:${TAG}
       - name: Tag
         if: ${{steps.secrets.outputs.GHCR_TOKEN != '' && github.head_ref == ''}}
         id: tag

@@ -1,0 +1,30 @@
+From fd3ae11740f699435f5c96dcb5ce2030979439f4 Mon Sep 17 00:00:00 2001
+From: Laszlo Kiraly <laszlo.kiraly@est.tech>
+Date: Tue, 4 Jul 2023 14:52:10 +0200
+Subject: [PATCH] build: add missing dependences for opensuse
+
+    VPP build failed when build xdp-tool on opensuse
+    Add the missing libraries and headers.
+
+    Type: fix
+
+Signed-off-by: Laszlo Kiraly <laszlo.kiraly@est.tech>
+---
+ Makefile | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/Makefile b/Makefile
+index 88d42dfe4..0449cf2af 100644
+--- a/Makefile
++++ b/Makefile
+@@ -176,6 +176,7 @@ RPM_SUSE_BUILDTOOLS_DEPS += clang cmake indent libtool make ninja python3-ply
+ 
+ RPM_SUSE_DEVEL_DEPS = glibc-devel-static libnuma-devel libelf-devel
+ RPM_SUSE_DEVEL_DEPS += libopenssl-devel libuuid-devel lsb-release
++RPM_SUSE_DEVEL_DEPS += libpcap-devel llvm-devel
+ RPM_SUSE_DEVEL_DEPS += curl libstdc++-devel bison gcc-c++ zlib-devel
+ 
+ RPM_SUSE_PYTHON_DEPS = python3-devel python3-pip python3-rpm-macros
+-- 
+2.34.1
+
